@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خريطة الجامعة</title>
+    <!-- تضمين بيانات المباني -->
+    <script src="/js/buildings-data.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #search-bar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+            #search-bar input {
+                width: 300px;
+                padding: 5px;
+            }
+
+            #search-bar button {
+                padding: 5px 10px;
+            }
+    </style>
+</head>
+<body>
+    <!-- حاوية الخريطة -->
+    <div id="map-container">
+       
+        <!-- تضمين خريطة UMap -->
+        <iframe id="mapFrame"
+                src="https://umap.openstreetmap.fr/en/map/tu-map_1166145"
+                width="100%"
+                height="100%"
+                frameborder="0"
+                allowfullscreen>
+        </iframe>
+    </div>
+
+    <!-- كود JavaScript -->
+    <script>
+        // عند النقر على زر البحث
+        document.getElementById('searchButton').addEventListener('click', function () {
+            // الحصول على قيمة البحث
+            var query = document.getElementById('searchInput').value;
+            var result = buildings.find(b => b.name.includes(query));
+
+            if (result) {
+                // تحويل الإحداثيات إلى zoom & center لـ UMap
+                var zoomLevel = 350;
+                var url = `https://umap.openstreetmap.fr/en/map/tu-map_1166145#${zoomLevel}/${result.latitude}/${result.longitude}`;
+
+                // تحديث عنوان iframe لتوجيه الخريطة
+                document.getElementById('mapFrame').src = url;
+            } else {
+                alert('لم يتم العثور على المبنى المطلوب.');
+            }
+        });
+    </script>
+</body>
+</html>

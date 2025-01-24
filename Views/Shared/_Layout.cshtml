@@ -1,0 +1,461 @@
+﻿<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"] - خريطة الجامعة</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+    <style>
+        /* خيارات تعديل الحجم */
+        .alert-icon img {
+            width: 20px;
+            height: 20px;
+            transition: transform 0.3s;
+        }
+
+            .alert-icon img:hover {
+                transform: scale(1.0); /* تكبير الصورة عند التمرير */
+            }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* شاشة التحميل */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e90ff, #f4f4f4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            color: #fff;
+            text-align: center;
+            font-size: 24px;
+        }
+
+            .loading-screen img {
+                width: 150px;
+                height: auto;
+                margin-bottom: 20px;
+                border-radius: 10px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            }
+
+            .loading-screen h1 {
+                font-size: 32px;
+                margin: 10px 0;
+                color: #ffffff;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            }
+
+            .loading-screen span {
+                font-size: 18px;
+                color: #ffffff;
+                text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+            }
+
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px; /* ارتفاع الشريط العلوي */
+            background-color: #ffffff;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+        }
+
+            .topbar img {
+                height: 40px;
+                cursor: pointer;
+                margin-right: 1.0cm; /* تعديل المسافة إلى 1.0 سنتيمتر */
+            }
+
+        .language-switch {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+            .search-container input {
+                width: 50%;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                outline: none;
+            }
+
+            .search-container button {
+                padding: 10px 20px;
+                font-size: 16px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                margin-left: 10px;
+            }
+
+                .search-container button:hover {
+                    background-color: #0056b3;
+                }
+
+        .sidebar {
+            position: fixed;
+            top: 60px; /* اجعل الشريط الجانبي يبدأ من أسفل الهيدر */
+            right: 0;
+            width: 80px;
+            height: calc(100% - 60px); /* اجعل ارتفاع الشريط الجانبي يتناسب مع باقي الشاشة */
+            background-color: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 40px; /* زيادة المسافة العلوية داخل الشريط الجانبي */
+            z-index: 1000;
+        }
+
+            .sidebar .icon {
+                width: 100%;
+                text-align: center;
+                margin-bottom: 20px;
+                cursor: pointer;
+                transition: transform 0.3s;
+            }
+
+                .sidebar .icon:hover {
+                    transform: scale(1.1);
+                }
+
+                .sidebar .icon img {
+                    width: 40px;
+                    height: 40px;
+                }
+
+                .sidebar .icon span {
+                    display: block;
+                    margin-top: 5px;
+                    font-size: 12px;
+                    color: #fff;
+                }
+
+        .alert-icon {
+            margin-top: auto;
+            padding: 10px;
+            margin-bottom: 80px; /* رفعها بمقدار 2cm للأعلى */
+        }
+        /* رفعها بمقدار 1cm للأعلى */ /* رفعها قليلاً للأعلى */
+        }
+
+        .alert-icon img {
+            width: 40px;
+            height: 40px;
+        }
+
+        .sub-sidebar {
+            position: fixed;
+            top: 60px; /* اجعل الشريط الفرعي يبدأ من أسفل الهيدر */
+            right: 80px;
+            width: 250px;
+            height: calc(100% - 60px); /* اجعل ارتفاع الشريط الفرعي يتناسب مع باقي الشاشة */
+            background-color: #f8f9fa;
+            border-left: 1px solid #ccc;
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+            z-index: 999;
+        }
+
+            .sub-sidebar.active {
+                display: flex;
+            }
+
+            .sub-sidebar .events-content {
+                text-align: center;
+            }
+
+                .sub-sidebar .events-content a {
+                    display: inline-block;
+                    margin-top: 20px;
+                    padding: 10px 20px;
+                    background-color: #007bff;
+                    color: #fff;
+                    text-decoration: none;
+                    border-radius: 5px;
+                }
+
+                    .sub-sidebar .events-content a:hover {
+                        background-color: #0056b3;
+                    }
+
+        main.container {
+            flex: 1;
+            margin-top: 60px; /* إضافة هامش علوي يعادل ارتفاع الهيدر */
+            margin-right: 80px; /* عرض الشريط الجانبي */
+            height: calc(100% - 60px); /* اجعل ارتفاع المحتوى يتناسب مع باقي الشاشة */
+            width: calc(100% - 80px);
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #messageBox {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 100px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            z-index: 2000;
+            text-align: center;
+        }
+
+            #messageBox button {
+                margin-top: 10px;
+                background-color: #1e90ff;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 5px;
+            }
+    </style>
+</head>
+<body>
+    <!-- شاشة التحميل -->
+    <div class="loading-screen" id="loadingScreen">
+        <img src="~/images/شعار_جامعة_الطائف_السعودية.png" alt="شعار جامعة الطائف">
+        <h1>أهلاً بكم في جامعة الطائف</h1>
+        <span>جاري التحميل</span>
+    </div>
+
+    <!-- الشريط العلوي -->
+    <div class="topbar">
+        <div class="language-switch">
+            <span>عربي</span>
+            <span>|</span>
+            <span>English</span>
+        </div>
+
+        <!-- شريط البحث -->
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="ابحث عن المبنى..." />
+            <button id="searchButton">بحث</button>
+        </div>
+        <img src="~/images/شعار_جامعة_الطائف_السعودية.png" alt="شعار" onclick="alert('تم النقر على الشعار!')">
+    </div>
+
+    <!-- الشريط الجانبي -->
+    <div class="sidebar">
+        <div class="icon" onclick="toggleSubSidebar('explore')">
+            <img src="~/images/explore-icon.png" alt="استكشاف">
+            <span>استكشاف</span>
+        </div>
+        <div class="icon" onclick="toggleSubSidebar('places')">
+            <img src="~/images/location-icon.png" alt="أماكني">
+            <span>أماكني</span>
+        </div>
+        <div class="icon" onclick="toggleSubSidebar('directions')">
+            <img src="~/images/directions-icon.png" alt="الاتجاهات">
+            <span>الاتجاهات</span>
+        </div>
+        <div class="icon" onclick="toggleSubSidebar('events')">
+            <img src="~/images/events-icon.png" alt="الأحداث">
+            <span>الأحداث</span>
+        </div>
+
+        <!-- علامة التعجب -->
+        <div class="icon alert-icon" onclick="showMessage()">
+            <img src="~/images/light-bulb.png" alt="تعجب">
+        </div>
+    </div>
+
+    <!-- الشريط الجانبي الفرعي -->
+    <div id="explore" class="sub-sidebar">
+        <h3>استكشاف</h3>
+        <ul>
+            <li>المباني</li>
+            <li>الإدارة الطبية</li>
+            <li>الطعام</li>
+        </ul>
+    </div>
+    <!-- تعديل قسم "أماكني" -->
+    <div id="places" class="sub-sidebar">
+        <h3>أماكني</h3>
+        <div id="placesContent">
+            <!-- سيتم تحديث هذا القسم ديناميكياً -->
+        </div>
+    </div>
+    <div id="directions" class="sub-sidebar">
+        <h3>الاتجاهات</h3>
+        <button onclick="resetDirections()" style="margin-bottom: 10px;">إعادة تعيين</button>
+        <div class="directions-content">
+            <!-- نقطة البداية -->
+            <input type="text" id="startLocation" placeholder="ابحث أو انقر فوق الخريطة..." style="margin-bottom: 10px;">
+            <button onclick="setStartLocation()" style="margin-bottom: 10px;">تحديد نقطة البداية</button>
+
+            <!-- نقطة النهاية -->
+            <input type="text" id="endLocation" placeholder="ابحث أو انقر فوق الخريطة..." style="margin-bottom: 10px;">
+            <button onclick="setEndLocation()" style="margin-bottom: 10px;">تحديد نقطة النهاية</button>
+
+            <!-- اختيار نوع الحركة -->
+            <select id="travelMode" style="margin-bottom: 10px;">
+                <option value="walking">Walking</option>
+                <option value="driving">Driving</option>
+            </select>
+
+
+            <!-- زر عرض الاتجاهات -->
+            <button onclick="calculateRoute()" style="width: 100%; background-color: #1e90ff; color: white; border: none; border-radius: 5px; padding: 10px;">عرض الاتجاهات</button>
+        </div>
+    </div>
+    <div id="events" class="sub-sidebar">
+        <h3>الأحداث</h3>
+        <div class="events-content">
+            <p>لرؤية الأحداث وآخر التحديثات، قم بزيارة صفحة تويتر الرسمية</p>
+            <a href="https://x.com/TaifUniversity?ref_src=twsrc%5Egoogle%7Ctwcamp%5Eserp%7Ctwgr%5Eauthor" target="_blank">زيارة تويتر</a>
+        </div>
+    </div>
+
+    <!-- محتوى الصفحة -->
+    <main role="main" class="container">
+        @RenderBody()
+    </main>
+
+    <!-- صندوق الرسالة -->
+    <div id="messageBox">
+        <p id="messageText" style="margin: 0;">خريطه نفاعليه لجامعه الطائف !</p>
+        <button onclick="closeMessage()">إغلاق</button>
+    </div>
+
+    <script>
+        // شاشة التحميل
+        window.addEventListener("load", function () {
+            setTimeout(function () {
+                document.getElementById("loadingScreen").style.display = "none";
+            }, 4000); // إخفاء شاشة التحميل بعد 4 ثوانٍ
+        });
+
+        function toggleSubSidebar(id) {
+            const sidebar = document.getElementById(id);
+            const isActive = sidebar.classList.contains('active');
+
+            // إغلاق جميع الأشرطة الجانبية الفرعية
+            document.querySelectorAll('.sub-sidebar').forEach(sub => sub.classList.remove('active'));
+
+            // إذا لم يكن الشريط الحالي نشطًا، قم بتنشيطه
+            if (!isActive) {
+                sidebar.classList.add('active');
+            }
+        }
+
+        // وظيفة عرض الرسالة
+        function showMessage() {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.style.display = 'block';
+        }
+
+        // وظيفة إغلاق الرسالة
+        function closeMessage() {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.style.display = 'none';
+        }
+    </script>
+    <script>
+        function searchLocation() {
+            const searchBox = document.getElementById('searchBox');
+            const query = searchBox.value.trim();
+
+            if (query) {
+                alert(`تم البحث عن: ${query}`);
+                // يمكنك إضافة وظيفة إضافية هنا للبحث عن موقع محدد على الخريطة
+            } else {
+                alert('يرجى إدخال نص للبحث.');
+            }
+        }
+    </script>
+    <script>
+        // الحد الأقصى لعدد عمليات البحث المحفوظة
+        const maxHistory = 5;
+
+        // وظيفة لحفظ عمليات البحث في localStorage
+        function saveSearch(query) {
+            if (!query) return;
+
+            // جلب البيانات الحالية من localStorage
+            let searchHistory = JSON.parse(localStorage.getItem("searchHistory")) || [];
+
+            // إضافة البحث الجديد في أعلى القائمة إذا لم يكن مكرراً
+            if (!searchHistory.includes(query)) {
+                searchHistory.unshift(query);
+            }
+
+            // الحد من عدد عمليات البحث المخزنة
+            if (searchHistory.length > maxHistory) {
+                searchHistory.pop(); // إزالة الأقدم
+            }
+
+            // تخزين القائمة المحدثة في localStorage
+            localStorage.setItem("searchHistory", JSON.stringify(searchHistory));
+        }
+
+        // وظيفة البحث وحفظ النص
+        document.getElementById("searchButton").addEventListener("click", function () {
+            const query = document.getElementById("searchInput").value.trim();
+            if (query) {
+                saveSearch(query); // حفظ النص في localStorage
+                
+            } else {
+                alert("يرجى إدخال نص للبحث.");
+            }
+        });
+
+        // وظيفة عرض عمليات البحث الأخيرة داخل قسم "أماكني"
+        function displaySearchHistory() {
+            const searchHistory = JSON.parse(localStorage.getItem("searchHistory")) || [];
+            const placesContent = document.getElementById("placesContent");
+
+            if (searchHistory.length === 0) {
+                placesContent.innerHTML = "<p>لا توجد عمليات بحث سابقة.</p>";
+            } else {
+                placesContent.innerHTML =
+                    "<h3>آخر عمليات البحث:</h3><ul>" +
+                    searchHistory.map((query) => `<li>${query}</li>`).join("") +
+                    "</ul>";
+            }
+        }
+
+        // استدعاء عرض القائمة عند فتح قسم "أماكني"
+        document
+            .querySelector(".icon[onclick*='places']")
+            .addEventListener("click", displaySearchHistory);
+    </script>
+
+</body>
+</html>
